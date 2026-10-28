@@ -1,0 +1,5 @@
+{
+  "app": "rocos-sia/rocos-app",
+  "viz": "rocos-sia/rocos-viz",
+  "ecm": null
+}

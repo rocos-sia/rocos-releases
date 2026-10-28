@@ -4,7 +4,7 @@ ROCOS App、Viz 与 ECM 的公开发布入口，用于维护版本清单、发�
 
 ## 当前状态
 
-发布仓库已初始化。正式版与内测版清单暂未收录安装包，各组件值为 `null`；自动同步、在线更新检测和安装程序尚未配置。
+已配置 App、Viz 的自动同步：每小时 UTC 第 17 分钟检查源仓库，也支持在 Actions 手动运行 `Sync component releases`。ECM 本轮暂不接入，保持 `null`。这一步提供发布清单与下载文件，客户端的在线提示和安装程序另行接入。
 
 `null` 表示该渠道尚无可提供的组件发布，不能据此判断用户已经安装最新版本。
 
@@ -37,7 +37,42 @@ ROCOS App、Viz 与 ECM 的公开发布入口，用于维护版本清单、发�
 
 一份组件清单只包含同一版本的产物。同一渠道汇总了三个组件，不表示这三个组件已被验证为兼容套装。Viz 若随 App 分发，其安装与兼容关系应在发布说明中明确；若独立部署，可提供单独的部署归档。
 
-后续可以通过 GitHub Actions 接收上游发布通知、定时检查或手动运行，完成收集、校验和清单更新。正式版可查询 GitHub 最新正式 Release；内测版需单独筛选预发布列表并比较版本，不能共用正式版的 `releases/latest` 查询。
+## 自动同步约定
+
+[sources.json](sources.json) 固定允许读取的公开上游仓库；`null` 表示关闭该组件。工作流使用发布仓库自身的 `GITHUB_TOKEN`，无需保存个人 token。App、Viz 各自在自己的仓库通过 `v*` 标签构建 DEB 并发布 Release；带 rc 的版本必须标记为 Prerelease。
+
+每个完整上游 Release 必须提供 `release.json`，其结构见 [source-release.schema.json](schemas/source-release.schema.json)。发布描述列出组件、版本、兼容性、安装包名称、架构、大小和 SHA256。当前同步器接收 DEB；渠道格式仍预留其他归档格式。上游示例：
+
+```json
+{
+  "schema_version": 1,
+  "component": "app",
+  "version": "3.2.0-rc.1",
+  "compatibility": {"api_version": "3.0.0", "shm_abi_version": 2},
+  "assets": [{
+    "name": "rocos-app_3.2.0~rc.1_amd64.deb",
+    "os": "linux", "arch": "amd64", "format": "deb",
+    "size_bytes": 1234,
+    "sha256": "替换为文件的64位SHA256"
+  }]
+}
+```
+
+自动流程分页读取源仓库 Release，忽略草稿和没有 `release.json` 的旧发行。正式与内测分别按 SemVer 选择最高版本（例如 rc.10 高于 rc.9），不按发布时间猜测，也不把旧版本回退写入清单。标签、预发布标志、描述文件和 DEB 内部版本必须匹配；Debian 使用 `~rc.N`，JSON/Git 仍使用 `-rc.N`。
+
+同步器下载并校验每个 DEB 的实际摘要、大小、包名、版本、架构，上传到本仓库草稿，再下载核对。全部成功才公开镜像 Release、最后更新渠道 JSON。失败时保留旧渠道文件；重试可补完草稿，已公开产物不覆盖。同版本已经收录后不重复下载，修订必须发布新版本。
+
+工作流通过并发锁避免同步互相覆盖。上游发布到收录通常需要等下一次小时任务；GitHub 定时任务可能延迟，公开仓库长期无活动时定时任务也可能停用，可从 Actions 手动启用/运行。也保留 `repository_dispatch` 事件入口，后续使用具有本仓库权限的专用凭据接入即时通知；目前无需此凭据。
+
+本地检查（需 Python 3.10+、GitHub CLI、dpkg-deb，并已登录 `gh`）：
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s tests -v
+python3 scripts/sync_releases.py --dry-run
+```
+
+`--dry-run` 会下载并校验选中的源安装包，但不上传、不修改渠道文件。正常运行需要对本仓库的写权限；工作流负责提交修改后的渠道文件。
 
 ## 校验清单
 

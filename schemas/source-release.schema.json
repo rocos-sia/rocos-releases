@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ROCOS source Release descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "component",
+    "version",
+    "compatibility",
+    "assets"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "component": {
+      "enum": [
+        "app",
+        "viz",
+        "ecm"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "api_version",
+        "shm_abi_version"
+      ],
+      "properties": {
+        "api_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "shm_abi_version": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      },
+      "description": "相关组件所需的 API 契约版本和共享内存 ABI；null 表示尚未声明，不能据此确认兼容。"
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "os",
+          "arch",
+          "format",
+          "size_bytes",
+          "sha256",
+          "name"
+        ],
+        "properties": {
+          "os": {
+            "const": "linux"
+          },
+          "arch": {
+            "enum": [
+              "amd64",
+              "arm64",
+              "armhf",
+              "all"
+            ]
+          },
+          "format": {
+            "const": "deb"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._+~-]*\\.deb$"
+          }
+        },
+        "description": "可下载的发布产物；arch=all 仅用于架构无关的包。签名未知时为 null。"
+      }
+    }
+  }
+}
