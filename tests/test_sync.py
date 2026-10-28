@@ -22,7 +22,7 @@ def release(version, draft=False, packaged=True):
 def descriptor():
     return {'schema_version': 1, 'component': 'app', 'version': '3.2.0-rc.1',
             'compatibility': {'api_version': '3.0.0', 'shm_abi_version': 2},
-            'assets': [{'name': 'rocos-app_3.2.0~rc.1_amd64.deb', 'os': 'linux',
+            'assets': [{'name': 'rocos-app_3.2.0-rc.1_amd64.deb', 'os': 'linux',
                         'arch': 'amd64', 'format': 'deb', 'size_bytes': 3,
                         'sha256': 'a' * 64}]}
 
@@ -52,7 +52,8 @@ class SyncTest(unittest.TestCase):
             sync.validate_descriptor(descriptor(), 'app', release('3.2.0-rc.2'))
 
     def test_traversal_bad_checksum_duplicate_platform_rejected(self):
-        for field, value in [('name', '../x.deb'), ('sha256', 'bad'), ('size_bytes', 0)]:
+        for field, value in [('name', '../x.deb'), ('name', 'app_3.2.0~rc.1_amd64.deb'),
+                             ('sha256', 'bad'), ('size_bytes', 0)]:
             data = descriptor()
             data['assets'][0][field] = value
             with self.assertRaises(ValidationError):

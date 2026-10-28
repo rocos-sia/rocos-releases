@@ -50,7 +50,7 @@ ROCOS App、Viz 与 ECM 的公开发布入口，用于维护版本清单、发�
   "version": "3.2.0-rc.1",
   "compatibility": {"api_version": "3.0.0", "shm_abi_version": 2},
   "assets": [{
-    "name": "rocos-app_3.2.0~rc.1_amd64.deb",
+    "name": "rocos-app_3.2.0-rc.1_amd64.deb",
     "os": "linux", "arch": "amd64", "format": "deb",
     "size_bytes": 1234,
     "sha256": "替换为文件的64位SHA256"
@@ -58,7 +58,7 @@ ROCOS App、Viz 与 ECM 的公开发布入口，用于维护版本清单、发�
 }
 ```
 
-自动流程分页读取源仓库 Release，忽略草稿和没有 `release.json` 的旧发行。正式与内测分别按 SemVer 选择最高版本（例如 rc.10 高于 rc.9），不按发布时间猜测，也不把旧版本回退写入清单。标签、预发布标志、描述文件和 DEB 内部版本必须匹配；Debian 使用 `~rc.N`，JSON/Git 仍使用 `-rc.N`。
+自动流程分页读取源仓库 Release，忽略草稿和没有 `release.json` 的旧发行。正式与内测分别按 SemVer 选择最高版本（例如 rc.10 高于 rc.9），不按发布时间猜测，也不把旧版本回退写入清单。标签、预发布标志、描述文件和 DEB 内部版本必须匹配；Debian 包内部使用 `~rc.N`，JSON/Git 和下载文件名使用 `-rc.N`，避免 GitHub 自动改写文件名中的 `~`。
 
 同步器下载并校验每个 DEB 的实际摘要、大小、包名、版本、架构，上传到本仓库草稿，再下载核对。全部成功才公开镜像 Release、最后更新渠道 JSON。失败时保留旧渠道文件；重试可补完草稿，已公开产物不覆盖。同版本已经收录后不重复下载，修订必须发布新版本。
 

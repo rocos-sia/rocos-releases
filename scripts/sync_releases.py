@@ -14,7 +14,7 @@ from semver import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 DESTINATION = 'rocos-sia/rocos-releases'
-SAFE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+~-]*\Z')
+SAFE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]*\Z')
 
 
 def run(*args):

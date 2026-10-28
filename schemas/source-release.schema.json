@@ -89,7 +89,7 @@
           },
           "name": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._+~-]*\\.deb$"
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*\\.deb$"
           }
         },
         "description": "可下载的发布产物；arch=all 仅用于架构无关的包。签名未知时为 null。"
