@@ -1,0 +1,351 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rocos-sia/rocos-releases/main/schemas/manifest.schema.json",
+  "title": "ROCOS release channel manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "channel",
+    "updated_at",
+    "components"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "channel": {
+      "enum": [
+        "stable",
+        "internal"
+      ]
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app",
+        "viz",
+        "ecm"
+      ],
+      "properties": {
+        "app": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/component"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "viz": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/component"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ecm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/component"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "prerelease",
+        "source_repository",
+        "tag",
+        "published_at",
+        "release_url",
+        "notes",
+        "assets",
+        "compatibility"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+        },
+        "prerelease": {
+          "type": "boolean"
+        },
+        "source_repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "release_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "assets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/asset"
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "api_version",
+            "shm_abi_version"
+          ],
+          "properties": {
+            "api_version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            },
+            "shm_abi_version": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            }
+          },
+          "description": "相关组件所需的 API 契约版本和共享内存 ABI；null 表示尚未声明，不能据此确认兼容。"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "prerelease": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "version": {
+                "pattern": "^\\d+\\.\\d+\\.\\d+-"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "version": {
+                "pattern": "^\\d+\\.\\d+\\.\\d+(?:\\+[^ ]+)?$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "arch",
+        "format",
+        "url",
+        "size_bytes",
+        "sha256",
+        "signature_url"
+      ],
+      "properties": {
+        "os": {
+          "const": "linux"
+        },
+        "arch": {
+          "enum": [
+            "amd64",
+            "arm64",
+            "armhf",
+            "all"
+          ]
+        },
+        "format": {
+          "enum": [
+            "deb",
+            "tar.gz",
+            "tar.xz",
+            "zip"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "signature_url": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "可下载的发布产物；arch=all 仅用于架构无关的包。签名未知时为 null。"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "channel": {
+            "const": "stable"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "properties": {
+              "app": {
+                "properties": {
+                  "prerelease": {
+                    "const": false
+                  }
+                }
+              },
+              "viz": {
+                "properties": {
+                  "prerelease": {
+                    "const": false
+                  }
+                }
+              },
+              "ecm": {
+                "properties": {
+                  "prerelease": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "channel": {
+            "const": "internal"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "components": {
+            "properties": {
+              "app": {
+                "properties": {
+                  "prerelease": {
+                    "const": true
+                  }
+                }
+              },
+              "viz": {
+                "properties": {
+                  "prerelease": {
+                    "const": true
+                  }
+                }
+              },
+              "ecm": {
+                "properties": {
+                  "prerelease": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "components": {
+            "anyOf": [
+              {
+                "properties": {
+                  "app": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "viz": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "ecm": {
+                    "type": "object"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}
