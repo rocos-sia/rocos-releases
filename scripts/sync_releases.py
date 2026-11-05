@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Mirror complete, verified public ROCOS releases; never replace published assets."""
+"""Mirror complete, verified ROCOS releases; never replace published assets."""
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -17,17 +18,21 @@ DESTINATION = 'rocos-sia/rocos-releases'
 SAFE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]*\Z')
 
 
-def run(*args):
-    return subprocess.check_output(args, text=True, timeout=600).strip()
+def run(*args, source=False):
+    env = os.environ.copy()
+    source_token = env.pop('SOURCE_GH_TOKEN', '')
+    if source and source_token:
+        env['GH_TOKEN'] = source_token
+    return subprocess.check_output(args, text=True, timeout=600, env=env).strip()
 
 
 def api(path):
     return json.loads(run('gh', 'api', path))
 
 
-def releases(repo):
+def releases(repo, *, source=False):
     pages = json.loads(run('gh', 'api', '--paginate', '--slurp',
-                          f'repos/{repo}/releases?per_page=100'))
+                          f'repos/{repo}/releases?per_page=100', source=source))
     return [release for page in pages for release in page]
 
 
@@ -57,7 +62,7 @@ def digest(path):
     return result.hexdigest()
 
 
-def download(repo, release, name, directory):
+def download(repo, release, name, directory, *, source=False):
     if not SAFE_NAME.fullmatch(name):
         raise ValueError(f'Unsafe asset name: {name!r}')
     assets = [a for a in release['assets'] if a['name'] == name]
@@ -67,7 +72,7 @@ def download(repo, release, name, directory):
     if name == 'release.json' and asset['size'] > 1024 * 1024:
         raise ValueError('Oversized release descriptor')
     run('gh', 'release', 'download', release['tag_name'], '--repo', repo,
-        '--pattern', name, '--dir', str(directory))
+        '--pattern', name, '--dir', str(directory), source=source)
     path = directory / name
     if path.stat().st_size != asset['size']:
         raise ValueError(f'{name}: GitHub size mismatch')
@@ -107,11 +112,11 @@ def verify_deb(path, asset, data):
 def mirror(repo, component, source, dry_run=False):
     with tempfile.TemporaryDirectory(prefix='rocos-release-') as tmp:
         directory = Path(tmp)
-        descriptor = download(repo, source, 'release.json', directory)
+        descriptor = download(repo, source, 'release.json', directory, source=True)
         data = json.loads(descriptor.read_text())
         validate_descriptor(data, component, source)
         for asset in data['assets']:
-            path = download(repo, source, asset['name'], directory)
+            path = download(repo, source, asset['name'], directory, source=True)
             verify_deb(path, asset, data)
         sums = directory / 'SHA256SUMS'
         sums.write_text(''.join(f'{digest(p)}  {p.name}\n'
@@ -174,7 +179,7 @@ def sync(dry_run=False):
         if repo is None:
             print(f'{component}: source not configured; unchanged')
             continue
-        available = releases(repo)
+        available = releases(repo, source=True)
         for channel, document in channels.items():
             options = candidates(available, channel)
             if not options:

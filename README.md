@@ -39,7 +39,15 @@ ROCOS App、Viz 与 ECM 的公开发布入口，用于维护版本清单、发�
 
 ## 自动同步约定
 
-[sources.json](sources.json) 固定允许读取的公开上游仓库；`null` 表示关闭该组件。工作流使用发布仓库自身的 `GITHUB_TOKEN`，无需保存个人 token。App、Viz 各自在自己的仓库通过 `v*` 标签构建 DEB 并发布 Release；带 rc 的版本必须标记为 Prerelease。
+[sources.json](sources.json) 固定允许读取的上游仓库（支持公开和私有仓库）；`null` 表示关闭该组件。工作流读取上游时优先使用 Actions Secret `SOURCE_REPO_PAT`，未设置时使用发布仓库自身的 `GITHUB_TOKEN`（适用于公开上游）。向本仓库发布 Release 和提交清单始终使用自身的 `GITHUB_TOKEN`。App、Viz 各自在自己的仓库通过 `v*` 标签构建 DEB 并发布 Release；带 rc 的版本必须标记为 Prerelease。
+
+私有上游的 PAT 配置：
+
+1. 在本仓库 **Settings → Secrets and variables → Actions → New repository secret** 新建 `SOURCE_REPO_PAT`，值填入个人 PAT。源码只引用 Secret 名称，不保存 token 值；不要把 PAT 写入代码、配置文件或提交记录。
+2. 如果需要覆盖个人账号可访问的多个所有者下的私有仓库，可以使用带 `repo` scope 的 classic PAT；实际访问仍受账号权限、组织 PAT 策略和 SSO 授权限制。若使用 fine-grained PAT，选择对应资源所有者和上游仓库，并授予 `Contents: Read-only`。详见 [GitHub PAT 文档](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)。
+3. 将需要同步的组件仓库配置到 `sources.json`；同步器不会扫描个人账号的所有仓库。保存 Secret 后，可从 Actions 手动运行同步。私有上游的安装包及发布说明也会镜像到本发布仓库。
+
+PAT 仅在同步步骤中通过 `SOURCE_GH_TOKEN` 环境变量注入，上游查询和下载时作为 `gh` 的 `GH_TOKEN` 使用，不写入命令行参数或 Git 配置。PAT 过期时更新同名 Secret 即可，无需修改源码。
 
 每个完整上游 Release 必须提供 `release.json`，其结构见 [source-release.schema.json](schemas/source-release.schema.json)。发布描述列出组件、版本、兼容性、安装包名称、架构、大小和 SHA256。当前同步器接收 DEB；渠道格式仍预留其他归档格式。上游示例：
 

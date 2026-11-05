@@ -28,6 +28,45 @@ def descriptor():
 
 
 class SyncTest(unittest.TestCase):
+    def test_source_pat_is_only_used_for_source_commands(self):
+        environment = {'GH_TOKEN': 'destination-test-token',
+                       'SOURCE_GH_TOKEN': 'source-test-token'}
+        with patch.dict(sync.os.environ, environment, clear=True), \
+                patch.object(sync.subprocess, 'check_output', return_value='[]') as command:
+            sync.releases('private/app', source=True)
+            self.assertEqual(command.call_args.kwargs['env']['GH_TOKEN'],
+                             'source-test-token')
+            self.assertNotIn('SOURCE_GH_TOKEN', command.call_args.kwargs['env'])
+            self.assertNotIn('source-test-token', str(command.call_args.args))
+            sync.releases(sync.DESTINATION)
+            self.assertEqual(command.call_args.kwargs['env']['GH_TOKEN'],
+                             'destination-test-token')
+            self.assertNotIn('SOURCE_GH_TOKEN', command.call_args.kwargs['env'])
+            self.assertEqual(sync.os.environ['GH_TOKEN'], 'destination-test-token')
+
+    def test_source_without_pat_keeps_default_authentication(self):
+        for environment in ({}, {'GH_TOKEN': 'default-test-token'},
+                            {'GH_TOKEN': 'default-test-token', 'SOURCE_GH_TOKEN': ''}):
+            with self.subTest(environment=environment), \
+                    patch.dict(sync.os.environ, environment, clear=True), \
+                    patch.object(sync.subprocess, 'check_output', return_value='[]') as command:
+                sync.releases('public/app', source=True)
+                self.assertEqual(command.call_args.kwargs['env'].get('GH_TOKEN'),
+                                 environment.get('GH_TOKEN'))
+                self.assertNotIn('SOURCE_GH_TOKEN', command.call_args.kwargs['env'])
+
+    def test_download_uses_selected_credentials(self):
+        item = release('3.2.0')
+        item['assets'] = [{'name': 'release.json', 'size': 2, 'state': 'uploaded'}]
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / 'release.json').write_bytes(b'{}')
+            for source in (True, False):
+                with patch.object(sync, 'run') as command:
+                    sync.download('owner/repo', item, 'release.json', directory,
+                                  source=source)
+                    self.assertEqual(command.call_args.kwargs, {'source': source})
+
     def test_semver_numeric_rc_and_channel_separation(self):
         items = [release(v) for v in ('3.2.0-rc.2', '3.2.0-rc.10', '3.2.0', '3.1.99')]
         self.assertEqual(str(sync.candidates(items, 'internal')[0][0]), '3.2.0-rc.10')
